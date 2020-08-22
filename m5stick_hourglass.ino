@@ -17,6 +17,21 @@ RTC_TimeTypeDef RTC_TimeStruct;
 
 int grainsTop;
 int bottomGrains[BOTTOM_HEIGHT][WIDTH];
+typedef struct {
+  int8_t x;
+  int8_t y;
+} Point;
+
+#define DIRTY_POINT_MAX 512
+
+Point clearedPoints[DIRTY_POINT_MAX];
+int clearedPointIndex;
+
+Point addedPoints[DIRTY_POINT_MAX];
+int addedPointIndex;
+
+Point dirtyPoints[DIRTY_POINT_MAX];
+int dirtyPointIndex;
 
 int getLeftBorder(int y) {
   if (y < 40)
@@ -55,13 +70,12 @@ void drawGrainsTop(int grainCount) {
 }
 
 void drawGrainsBottom() {
-  for (int y = BOTTOM_HEIGHT - 1; y >= 0; y--) {
-    for (int x = 0; x < WIDTH; x++) {
-      if (bottomGrains[y][x] == 1) {
-        M5.Lcd.drawPixel(x, y + BOTTOM_HEIGHT, COLOR_GRAIN);
-      }
-    }
+  for (int i = 0; i < dirtyPointIndex; i++) {
+    M5.Lcd.drawPixel(dirtyPoints[i].x, dirtyPoints[i].y + BOTTOM_HEIGHT,
+                     bottomGrains[dirtyPoints[i].y][dirtyPoints[i].x] ? RED
+                                                                      : BLUE);
   }
+  dirtyPointIndex = 0;
 }
 
 void drawBorders() {
@@ -80,6 +94,13 @@ void initializeBottomGrains() {
   }
 }
 
+void makePointDirty(int x, int y) {
+  Point p;
+  p.x = x;
+  p.y = y;
+  dirtyPoints[dirtyPointIndex++] = p;
+}
+
 void physicsStep() {
   // note that we skip bottom-most row as nothing can happen there
   for (int y = BOTTOM_HEIGHT - 2; y >= 0; y--) {
@@ -92,6 +113,8 @@ void physicsStep() {
       else if (bottomGrains[y + 1][x] == 0) {
         bottomGrains[y + 1][x] = 1;
         bottomGrains[y][x] = 0;
+        makePointDirty(x, y + 1);
+        makePointDirty(x, y);
       }
       // if there IS a grain underneath - check if we can fall to the left
       else if (y < BOTTOM_HEIGHT - 2) {
@@ -99,11 +122,15 @@ void physicsStep() {
           // swap the grains
           bottomGrains[y + 1][x - 1] = 1;
           bottomGrains[y][x] = 0;
+          makePointDirty(x - 1, y + 1);
+          makePointDirty(x, y);
         } // look to the right
         else if (x < WIDTH - 2 && bottomGrains[y + 1][x + 1] == 0) {
           // swap the grains
           bottomGrains[y + 1][x + 1] = 1;
           bottomGrains[y][x] = 0;
+          makePointDirty(x + 1, y + 1);
+          makePointDirty(x, y);
         }
       }
     }
@@ -113,7 +140,7 @@ void physicsStep() {
 void spawn() { bottomGrains[0][WIDTH / 2] = 1; }
 
 void draw() {
-  drawBorders();
+  // drawBorders();
   drawGrainsTop(grainsTop);
   drawGrainsBottom();
 }
@@ -140,6 +167,7 @@ void setup() {
 void reset() {
   initializeBottomGrains();
   grainsTop = 2000;
+  drawBorders();
 }
 
 void loop() {
@@ -151,4 +179,5 @@ void loop() {
 
   M5.Rtc.GetTime(&RTC_TimeStruct);
   tick();
+  delay(30);
 }
