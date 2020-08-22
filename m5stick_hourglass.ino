@@ -102,7 +102,7 @@ void makePointDirty(int x, int y) {
 }
 
 void physicsStep() {
-  // note that we skip bottom-most row as nothing can happen there
+  // note that we skip bottom-most row as nothing can happen there with physics
   for (int y = BOTTOM_HEIGHT - 2; y >= 0; y--) {
     for (int x = 0; x < WIDTH; x++) {
       // if there's no grain, don't do anything
@@ -125,7 +125,7 @@ void physicsStep() {
           makePointDirty(x - 1, y + 1);
           makePointDirty(x, y);
         } // look to the right
-        else if (x < WIDTH - 2 && bottomGrains[y + 1][x + 1] == 0) {
+        else if (x < WIDTH - 1 && bottomGrains[y + 1][x + 1] == 0) {
           // swap the grains
           bottomGrains[y + 1][x + 1] = 1;
           bottomGrains[y][x] = 0;
@@ -148,6 +148,8 @@ void draw() {
 void tick() {
   grainsTop--;
   spawn();
+  physicsStep();
+  physicsStep();
   physicsStep();
   draw();
 }
