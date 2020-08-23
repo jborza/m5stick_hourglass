@@ -8,12 +8,16 @@
 #define HEIGHT 160
 #define GRAIN_COUNT_TOTAL 4800
 
-#define COLOR_GLASS 0x96BF
+#define COLOR_GLASS 0xDEBA //0x96BF
 #define COLOR_M5STICK_ORANGE 0xFAE2
-#define COLOR_GRAIN 0x72A4
+#define COLOR_GRAIN 0x72A4 //0xE5A9 //0x72A4
+
+int hourglassSpinSeconds = 300;
+long hourglassSpinMillis;
 
 int grainsTop;
 int bottomGrains[BOTTOM_HEIGHT][WIDTH];
+
 typedef struct {
   int8_t x;
   int8_t y;
@@ -23,6 +27,8 @@ typedef struct {
 
 Point dirtyPoints[DIRTY_POINT_MAX];
 int dirtyPointIndex;
+
+long millisStart;
 
 int getLeftBorder(int y) {
   if (y < 40)
@@ -129,9 +135,21 @@ void draw() {
   drawGrainsBottom();
 }
 
+//amount of grains in the top part at this time
+int grainsForMillisElapsed(long millisElapsed){
+  return ((float)millisElapsed / hourglassSpinMillis) * GRAIN_COUNT_TOTAL;
+}
+
 void tick() {
-  grainTick();
-  physicsStep();
+  long millisCurrent = millis();
+  long millisElapsed = millisCurrent - millisStart;
+  int newGrainsTop = grainsForMillisElapsed(millisElapsed);
+  //calculate amount of grains to move
+  int grainDifference = grainsTop - newGrainsTop;
+  for(int i = 0; i < grainDifference; i++){
+    grainTick();
+    physicsStep();
+  }
   draw();
 }
 
@@ -144,10 +162,12 @@ void setup() {
 
 void reset() {
   M5.Lcd.fillScreen(BLACK);
-  grainsTop = 1000;
+  hourglassSpinMillis = hourglassSpinSeconds * 1000L;
+  grainsTop = 1400;
   initializeBottomGrains();
   drawBorders();
   draw();
+  millisStart = millis();
 }
 
 void loop() {
@@ -157,5 +177,4 @@ void loop() {
     return;
   }
   tick();
-  delay(30);
 }
