@@ -53,8 +53,9 @@ void drawGrainsTop(int grainCount) {
       int leftHalf = remainingGrains / 2;
       M5.Lcd.drawLine(leftBorder, y, leftBorder + leftHalf, y, COLOR_GRAIN);
       M5.Lcd.drawLine(rightBorder - leftHalf, y, rightBorder, y, COLOR_GRAIN);
-      //fill out the rest
-      M5.Lcd.drawLine(leftBorder+leftHalf,y, WIDTH-leftBorder-remainingGrains, y, COLOR_GLASS);
+      
+      //fill out the rest with "glass"
+      M5.Lcd.drawLine(leftBorder+leftHalf, y, rightBorder - leftHalf, y, COLOR_GLASS);
       return;
     }
   }
