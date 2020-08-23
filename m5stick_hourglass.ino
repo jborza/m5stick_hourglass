@@ -12,11 +12,13 @@
 #define COLOR_M5STICK_ORANGE 0xFAE2
 #define COLOR_GRAIN 0x72A4 //0xE5A9 //0x72A4
 
-int hourglassSpinSeconds = 300;
+int hourglassSpinSeconds = 60;
 long hourglassSpinMillis;
 
 int grainsTop;
 int bottomGrains[BOTTOM_HEIGHT][WIDTH];
+
+//#define DEBUG
 
 typedef struct {
   int8_t x;
@@ -137,16 +139,26 @@ void draw() {
 
 //amount of grains in the top part at this time
 int grainsForMillisElapsed(long millisElapsed){
-  return ((float)millisElapsed / hourglassSpinMillis) * GRAIN_COUNT_TOTAL;
+  return GRAIN_COUNT_TOTAL - ((float)millisElapsed / hourglassSpinMillis) * GRAIN_COUNT_TOTAL;
 }
 
 void tick() {
   long millisCurrent = millis();
   long millisElapsed = millisCurrent - millisStart;
   int newGrainsTop = grainsForMillisElapsed(millisElapsed);
+  #if DEBUG
+  Serial.print("tick with elapsed:");
+  Serial.println(millisElapsed);
+  Serial.print("grains top:");
+  Serial.print(grainsTop);
+  Serial.print(" | new grains top:");
+  Serial.print(newGrainsTop);
+  Serial.print(" diff:");
+  Serial.println(grainsTop - newGrainsTop);
+  #endif
   //calculate amount of grains to move
   int grainDifference = grainsTop - newGrainsTop;
-  for(int i = 0; i < grainDifference; i++){
+  while(grainsTop > newGrainsTop){
     grainTick();
     physicsStep();
   }
@@ -161,9 +173,10 @@ void setup() {
 }
 
 void reset() {
+  Serial.begin(115200);
   M5.Lcd.fillScreen(BLACK);
   hourglassSpinMillis = hourglassSpinSeconds * 1000L;
-  grainsTop = 1400;
+  grainsTop = GRAIN_COUNT_TOTAL;
   initializeBottomGrains();
   drawBorders();
   draw();
