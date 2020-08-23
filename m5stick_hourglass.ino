@@ -12,13 +12,12 @@
 #define COLOR_M5STICK_ORANGE 0xFAE2
 #define COLOR_GRAIN 0x72A4 //0xE5A9 //0x72A4
 
-int hourglassSpinSeconds = 60;
+// the main configuration parameter
+int hourglassSpinSeconds = 300;
 long hourglassSpinMillis;
 
 int grainsTop;
 int bottomGrains[BOTTOM_HEIGHT][WIDTH];
-
-//#define DEBUG
 
 typedef struct {
   int8_t x;
@@ -56,6 +55,7 @@ void drawGrainsTop(int grainCount) {
       M5.Lcd.drawLine(leftBorder, y, rightBorder, y, COLOR_GRAIN);
       currentGrains += grainsInThisRow;
     } else {
+        if(y  < TOP_HEIGHT-1){
       // draw partial row - disappearing from center out
       int remainingGrains = grainCount - currentGrains;
       int leftHalf = remainingGrains / 2;
@@ -63,7 +63,11 @@ void drawGrainsTop(int grainCount) {
       M5.Lcd.drawLine(rightBorder - leftHalf, y, rightBorder, y, COLOR_GRAIN);
       
       //fill out the rest with "glass"
-      M5.Lcd.drawLine(leftBorder+leftHalf, y, rightBorder - leftHalf, y, COLOR_GLASS);
+    
+        M5.Lcd.drawLine(leftBorder+leftHalf, y, rightBorder - leftHalf, y, COLOR_GLASS);
+      }
+      //fill out the line above to clear it
+      M5.Lcd.drawLine(leftBorder,y-1, rightBorder, y-1, COLOR_GLASS);
       return;
     }
   }
@@ -85,6 +89,8 @@ void drawBorders() {
     int rightBorder = WIDTH - getLeftBorder(y);
     M5.Lcd.drawLine(leftBorder, y, rightBorder, y, COLOR_GLASS);
   }
+  M5.Lcd.setCursor(0, 75, 1);
+  M5.Lcd.printf("%d:00", hourglassSpinSeconds/60);
 }
 
 void initializeBottomGrains() {
@@ -146,16 +152,7 @@ void tick() {
   long millisCurrent = millis();
   long millisElapsed = millisCurrent - millisStart;
   int newGrainsTop = grainsForMillisElapsed(millisElapsed);
-  #if DEBUG
-  Serial.print("tick with elapsed:");
-  Serial.println(millisElapsed);
-  Serial.print("grains top:");
-  Serial.print(grainsTop);
-  Serial.print(" | new grains top:");
-  Serial.print(newGrainsTop);
-  Serial.print(" diff:");
-  Serial.println(grainsTop - newGrainsTop);
-  #endif
+
   //calculate amount of grains to move
   int grainDifference = grainsTop - newGrainsTop;
   while(grainsTop > newGrainsTop){
@@ -173,7 +170,6 @@ void setup() {
 }
 
 void reset() {
-  Serial.begin(115200);
   M5.Lcd.fillScreen(BLACK);
   hourglassSpinMillis = hourglassSpinSeconds * 1000L;
   grainsTop = GRAIN_COUNT_TOTAL;
@@ -183,9 +179,32 @@ void reset() {
   millisStart = millis();
 }
 
+void nextInterval(){
+ if(hourglassSpinSeconds == 60){
+    hourglassSpinSeconds = 180;
+ }
+ else if(hourglassSpinSeconds == 180){
+  hourglassSpinSeconds = 300;
+ }
+ else if(hourglassSpinSeconds == 300){
+  hourglassSpinSeconds = 600;
+ }
+ else if(hourglassSpinSeconds == 600){
+  hourglassSpinSeconds = 900;
+ }
+ else if(hourglassSpinSeconds == 900){
+  hourglassSpinSeconds = 60;
+ }
+}
+
 void loop() {
   M5.update();
   if (M5.BtnA.wasPressed()) {
+    reset();
+    return;
+  }
+  if (M5.BtnB.wasPressed()){
+    nextInterval();
     reset();
     return;
   }
