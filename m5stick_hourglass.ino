@@ -8,9 +8,9 @@
 #define HEIGHT 160
 #define GRAIN_COUNT_TOTAL 4800
 
-#define COLOR_GLASS 0xDEBA //0x96BF
+#define COLOR_GLASS 0xDEBA // 0x96BF
 #define COLOR_M5STICK_ORANGE 0xFAE2
-#define COLOR_GRAIN 0x72A4 //0xE5A9 //0x72A4
+#define COLOR_GRAIN 0x72A4 // 0xE5A9 //0x72A4
 
 // the main configuration parameter
 int hourglassSpinSeconds = 300;
@@ -55,32 +55,40 @@ void drawGrainsTop(int grainCount) {
       M5.Lcd.drawLine(leftBorder, y, rightBorder, y, COLOR_GRAIN);
       currentGrains += grainsInThisRow;
     } else {
-        if(y  < TOP_HEIGHT-1){
-      // draw partial row - disappearing from center out
-      int remainingGrains = grainCount - currentGrains;
-      int leftHalf = remainingGrains / 2;
-      M5.Lcd.drawLine(leftBorder, y, leftBorder + leftHalf, y, COLOR_GRAIN);
-      M5.Lcd.drawLine(rightBorder - leftHalf, y, rightBorder, y, COLOR_GRAIN);
-      
-      //fill out the rest with "glass"
-    
-        M5.Lcd.drawLine(leftBorder+leftHalf, y, rightBorder - leftHalf, y, COLOR_GLASS);
+      if (y < TOP_HEIGHT - 1) {
+        // draw partial row - disappearing from center out
+        int remainingGrains = grainCount - currentGrains;
+        int leftHalf = remainingGrains / 2;
+        M5.Lcd.drawLine(leftBorder, y, leftBorder + leftHalf, y, COLOR_GRAIN);
+        M5.Lcd.drawLine(rightBorder - leftHalf, y, rightBorder, y, COLOR_GRAIN);
+
+        // fill out the rest with "glass"
+
+        M5.Lcd.drawLine(leftBorder + leftHalf, y, rightBorder - leftHalf, y,
+                        COLOR_GLASS);
       }
-      //fill out the line above to clear it
-      M5.Lcd.drawLine(leftBorder,y-1, rightBorder, y-1, COLOR_GLASS);
+      // fill out the line above to clear it
+      M5.Lcd.drawLine(leftBorder, y - 1, rightBorder, y - 1, COLOR_GLASS);
       return;
     }
   }
 }
 
+void makePointDirty(int x, int y) {
+  Point p;
+  p.x = x;
+  p.y = y;
+  dirtyPoints[dirtyPointIndex++] = p;
+}
+
 void drawGrainsBottom() {
-  for (int y = BOTTOM_HEIGHT - 1; y >= 0; y--) {
-    for (int x = 0; x < WIDTH; x++) {
-      if (bottomGrains[y][x] == 1) {
-        M5.Lcd.drawPixel(x, y + BOTTOM_HEIGHT, COLOR_GRAIN);
-      }
-    }
+  for (int i = 0; i < dirtyPointIndex; i++) {
+    M5.Lcd.drawPixel(dirtyPoints[i].x, dirtyPoints[i].y + BOTTOM_HEIGHT,
+                     bottomGrains[dirtyPoints[i].y][dirtyPoints[i].x]
+                         ? COLOR_GRAIN
+                         : COLOR_GLASS);
   }
+  dirtyPointIndex = 0;
 }
 
 void drawBorders() {
@@ -89,8 +97,8 @@ void drawBorders() {
     int rightBorder = WIDTH - getLeftBorder(y);
     M5.Lcd.drawLine(leftBorder, y, rightBorder, y, COLOR_GLASS);
   }
-  M5.Lcd.setCursor(0, 75, 1);
-  M5.Lcd.printf("%d:00", hourglassSpinSeconds/60);
+  M5.Lcd.setCursor(0, 80, 1);
+  M5.Lcd.printf("%d:00", hourglassSpinSeconds / 60);
 }
 
 void initializeBottomGrains() {
@@ -113,6 +121,8 @@ void physicsStep() {
       else if (bottomGrains[y + 1][x] == 0) {
         bottomGrains[y + 1][x] = 1;
         bottomGrains[y][x] = 0;
+        makePointDirty(x, y + 1);
+        makePointDirty(x, y);
       }
       // if there IS a grain underneath - check if we can fall to the left
       else if (y < BOTTOM_HEIGHT - 2) {
@@ -120,21 +130,25 @@ void physicsStep() {
           // swap the grains
           bottomGrains[y + 1][x - 1] = 1;
           bottomGrains[y][x] = 0;
+          makePointDirty(x - 1, y + 1);
+          makePointDirty(x, y);
         } // look to the right
-        else if (x < WIDTH - 2 && bottomGrains[y + 1][x + 1] == 0) {
+        else if (x < WIDTH - 1 && bottomGrains[y + 1][x + 1] == 0) {
           // swap the grains
           bottomGrains[y + 1][x + 1] = 1;
           bottomGrains[y][x] = 0;
+          makePointDirty(x + 1, y + 1);
+          makePointDirty(x, y);
         }
       }
     }
   }
 }
 
-void grainTick(){
-  //remove a grain from the top
+void grainTick() {
+  // remove a grain from the top
   grainsTop--;
-  //spawn a grain at the bottom
+  // spawn a grain at the bottom
   bottomGrains[0][WIDTH / 2] = 1;
 }
 
@@ -143,9 +157,10 @@ void draw() {
   drawGrainsBottom();
 }
 
-//amount of grains in the top part at this time
-int grainsForMillisElapsed(long millisElapsed){
-  return GRAIN_COUNT_TOTAL - ((float)millisElapsed / hourglassSpinMillis) * GRAIN_COUNT_TOTAL;
+// amount of grains in the top part at this time
+int grainsForMillisElapsed(long millisElapsed) {
+  return GRAIN_COUNT_TOTAL -
+         ((float)millisElapsed / hourglassSpinMillis) * GRAIN_COUNT_TOTAL;
 }
 
 void tick() {
@@ -153,9 +168,9 @@ void tick() {
   long millisElapsed = millisCurrent - millisStart;
   int newGrainsTop = grainsForMillisElapsed(millisElapsed);
 
-  //calculate amount of grains to move
+  // calculate amount of grains to move
   int grainDifference = grainsTop - newGrainsTop;
-  while(grainsTop > newGrainsTop){
+  while (grainsTop > newGrainsTop) {
     grainTick();
     physicsStep();
   }
@@ -179,22 +194,18 @@ void reset() {
   millisStart = millis();
 }
 
-void nextInterval(){
- if(hourglassSpinSeconds == 60){
+void nextInterval() {
+  if (hourglassSpinSeconds == 60) {
     hourglassSpinSeconds = 180;
- }
- else if(hourglassSpinSeconds == 180){
-  hourglassSpinSeconds = 300;
- }
- else if(hourglassSpinSeconds == 300){
-  hourglassSpinSeconds = 600;
- }
- else if(hourglassSpinSeconds == 600){
-  hourglassSpinSeconds = 900;
- }
- else if(hourglassSpinSeconds == 900){
-  hourglassSpinSeconds = 60;
- }
+  } else if (hourglassSpinSeconds == 180) {
+    hourglassSpinSeconds = 300;
+  } else if (hourglassSpinSeconds == 300) {
+    hourglassSpinSeconds = 600;
+  } else if (hourglassSpinSeconds == 600) {
+    hourglassSpinSeconds = 900;
+  } else if (hourglassSpinSeconds == 900) {
+    hourglassSpinSeconds = 60;
+  }
 }
 
 void loop() {
@@ -203,7 +214,7 @@ void loop() {
     reset();
     return;
   }
-  if (M5.BtnB.wasPressed()){
+  if (M5.BtnB.wasPressed()) {
     nextInterval();
     reset();
     return;
