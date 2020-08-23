@@ -12,9 +12,6 @@
 #define COLOR_M5STICK_ORANGE 0xFAE2
 #define COLOR_GRAIN 0x72A4
 
-RTC_TimeTypeDef RTC_TimeStruct;
-// RTC_DateTypeDef RTC_DateStruct;
-
 int grainsTop;
 int bottomGrains[BOTTOM_HEIGHT][WIDTH];
 typedef struct {
@@ -56,6 +53,8 @@ void drawGrainsTop(int grainCount) {
       int leftHalf = remainingGrains / 2;
       M5.Lcd.drawLine(leftBorder, y, leftBorder + leftHalf, y, COLOR_GRAIN);
       M5.Lcd.drawLine(rightBorder - leftHalf, y, rightBorder, y, COLOR_GRAIN);
+      //fill out the rest
+      M5.Lcd.drawLine(leftBorder+leftHalf,y, WIDTH-leftBorder-remainingGrains, y, COLOR_GLASS);
       return;
     }
   }
@@ -74,7 +73,7 @@ void drawGrainsBottom() {
 void drawBorders() {
   for (int y = 0; y < HEIGHT; y++) {
     int leftBorder = getLeftBorder(y);
-    int rightBorder = getRightBorder(y);
+    int rightBorder = WIDTH - getLeftBorder(y);
     M5.Lcd.drawLine(leftBorder, y, rightBorder, y, COLOR_GLASS);
   }
 }
@@ -117,17 +116,20 @@ void physicsStep() {
   }
 }
 
-void spawn() { bottomGrains[0][WIDTH / 2] = 1; }
+void grainTick(){
+  //remove a grain from the top
+  grainsTop--;
+  //spawn a grain at the bottom
+  bottomGrains[0][WIDTH / 2] = 1;
+}
 
 void draw() {
-  drawBorders();
   drawGrainsTop(grainsTop);
   drawGrainsBottom();
 }
 
 void tick() {
-  grainsTop--;
-  spawn();
+  grainTick();
   physicsStep();
   draw();
 }
@@ -136,17 +138,15 @@ void setup() {
   M5.begin();
   // horizontal rotation
   M5.Lcd.setRotation(0);
-  M5.Lcd.fillScreen(BLACK);
-  M5.Lcd.drawLine(0, 0, 40, 80, RED);
-  grainsTop = GRAIN_COUNT_TOTAL;
-  grainsTop = 400;
-  drawBorders();
-  draw();
+  reset();
 }
 
 void reset() {
+  M5.Lcd.fillScreen(BLACK);
+  grainsTop = 1000;
   initializeBottomGrains();
-  grainsTop = 2000;
+  drawBorders();
+  draw();
 }
 
 void loop() {
@@ -155,7 +155,6 @@ void loop() {
     reset();
     return;
   }
-
-  M5.Rtc.GetTime(&RTC_TimeStruct);
   tick();
+  delay(30);
 }
