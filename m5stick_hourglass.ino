@@ -50,20 +50,21 @@ int grainsInRow(int y) { return (WIDTH - getLeftBorder(y) * 2); }
 void drawGrainsTop(int grainCount) {
   int currentGrains = 0;
   for (int y = TOP_HEIGHT - 1; y >= 0; y--) {
+    int grainColor = grainColors[y%GRAIN_COLOR_LENGTH];
     int grainsInThisRow = grainsInRow(y);
     // draw full row if we can
     int leftBorder = getLeftBorder(y);
     int rightBorder = WIDTH - leftBorder;
     if ((currentGrains + grainsInThisRow) < grainCount) {
-      M5.Lcd.drawLine(leftBorder, y, rightBorder, y, COLOR_GRAIN);
+      M5.Lcd.drawLine(leftBorder, y, rightBorder, y, grainColor);
       currentGrains += grainsInThisRow;
     } else {
       if (y < TOP_HEIGHT - 1) {
         // draw partial row - disappearing from center out
         int remainingGrains = grainCount - currentGrains;
         int leftHalf = remainingGrains / 2;
-        M5.Lcd.drawLine(leftBorder, y, leftBorder + leftHalf, y, COLOR_GRAIN);
-        M5.Lcd.drawLine(rightBorder - leftHalf, y, rightBorder, y, COLOR_GRAIN);
+        M5.Lcd.drawLine(leftBorder, y, leftBorder + leftHalf, y, grainColor);
+        M5.Lcd.drawLine(rightBorder - leftHalf, y, rightBorder, y, grainColor);
 
         // fill out the rest with "glass"
 
