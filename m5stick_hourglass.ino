@@ -19,9 +19,9 @@ long hourglassSpinMillis;
 int grainsTop;
 int bottomGrains[BOTTOM_HEIGHT][WIDTH];
 
-#define GRAIN_COLOR_LENGTH 21
-int grainColors[GRAIN_COLOR_LENGTH] = {0x7800,0xa145,0x8222,0x9a85,0xcb23,0xb421,0xc407,0xb471,0xd503,0xed0b,0xcd91,0xd5b0,0xeed5,0xfed5,0xff17,0xff58,0xffba,0xb5ad,0xe734,0x9aa6,0xa349};
-
+#define GRAIN_COLOR_LENGTH 23
+int grainColors[GRAIN_COLOR_LENGTH] = {0xe654,0xbd0f,0xa388,0xcd51,0xb48d,0xddd3,0x9389,0xbc4c,0xc50e,0xbd0f,0xcd91,0xb4ad,0xb4af,0xd570,0x8b8a,0xb4af,0xc54f,0xee75,0xcd92,0xcd50,0x93ab,0xe54b,0x7ac7};
+int topGrainColors[WIDTH*HEIGHT];
 typedef struct {
   int8_t x;
   int8_t y;
@@ -47,27 +47,38 @@ int getLeftBorder(int y) {
 
 int grainsInRow(int y) { return (WIDTH - getLeftBorder(y) * 2); }
 
+void drawGrainsTopFull(){
+  for (int y = TOP_HEIGHT - 1; y >= 0; y--) {
+    int leftBorder = getLeftBorder(y);
+    int rightBorder = WIDTH - leftBorder;
+    for(int x = leftBorder; x <= rightBorder; x++) {
+        M5.Lcd.drawPixel(x,y,topGrainColors[y*WIDTH+x]);
+    }
+  }
+}
+
 void drawGrainsTop(int grainCount) {
   int currentGrains = 0;
   for (int y = TOP_HEIGHT - 1; y >= 0; y--) {
-    int grainColor = grainColors[y%GRAIN_COLOR_LENGTH];
+    int grainColor = topGrainColors[y%GRAIN_COLOR_LENGTH];
     int grainsInThisRow = grainsInRow(y);
-    // draw full row if we can
+    // skip full rows
     int leftBorder = getLeftBorder(y);
     int rightBorder = WIDTH - leftBorder;
     if ((currentGrains + grainsInThisRow) < grainCount) {
-      M5.Lcd.drawLine(leftBorder, y, rightBorder, y, grainColor);
       currentGrains += grainsInThisRow;
     } else {
       if (y < TOP_HEIGHT - 1) {
         // draw partial row - disappearing from center out
         int remainingGrains = grainCount - currentGrains;
         int leftHalf = remainingGrains / 2;
-        M5.Lcd.drawLine(leftBorder, y, leftBorder + leftHalf, y, grainColor);
-        M5.Lcd.drawLine(rightBorder - leftHalf, y, rightBorder, y, grainColor);
-
+        for(int x = leftBorder; x < leftBorder+leftHalf; x++){
+          M5.Lcd.drawPixel(x,y,topGrainColors[y*WIDTH+x]); 
+        }
+         for(int x = rightBorder - leftHalf; x <= rightBorder; x++){
+           M5.Lcd.drawPixel(x,y,topGrainColors[y*WIDTH+x]); 
+         }
         // fill out the rest with "glass"
-
         M5.Lcd.drawLine(leftBorder + leftHalf, y, rightBorder - leftHalf, y,
                         COLOR_GLASS);
       }
@@ -102,7 +113,7 @@ void drawBorders() {
     int rightBorder = WIDTH - getLeftBorder(y);
     M5.Lcd.drawLine(leftBorder, y, rightBorder, y, COLOR_GLASS);
   }
-  M5.Lcd.setCursor(0, 80, 1);
+  M5.Lcd.setCursor(0, 77, 1);
   M5.Lcd.printf("%d:00", hourglassSpinSeconds / 60);
 }
 
@@ -186,10 +197,16 @@ void tick() {
   draw();
 }
 
+void generateTopGrainColors(){
+  for(int i = 0; i < WIDTH*HEIGHT; i++)
+    topGrainColors[i] = randomGrainColor();
+}
+
 void setup() {
   M5.begin();
   // horizontal rotation
   M5.Lcd.setRotation(0);
+  generateTopGrainColors();
   reset();
 }
 
@@ -199,6 +216,7 @@ void reset() {
   grainsTop = GRAIN_COUNT_TOTAL;
   initializeBottomGrains();
   drawBorders();
+  drawGrainsTopFull();
   draw();
   millisStart = millis();
 }
